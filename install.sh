@@ -8,7 +8,7 @@
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+YELLOW='\1;33m'
 NC='\033[0m'
 
 if [[ $EUID -ne 0 ]]; then
@@ -68,7 +68,7 @@ fi
 chmod +x "/usr/local/bin/${EXCHANGE}_exporter.py"
 
 # 6. Systemd сервис node_exporter
-cat > /etc/systemd/system/node_exporter.service <<EOF
+cat > /etc/systemd/system/node_exporter.service << 'EOF'
 [Unit]
 Description=Node Exporter
 After=network.target
@@ -86,7 +86,7 @@ WantedBy=multi-user.target
 EOF
 
 # 7. Systemd сервис выбранной биржи
-cat > /etc/systemd/system/${EXCHANGE}_exporter.service <<EOF
+cat > /etc/systemd/system/${EXCHANGE}_exporter.service << 'EOF'
 [Unit]
 Description=${NAME} Ping Exporter
 After=network.target
