@@ -96,7 +96,6 @@ User=prometheus
 Group=prometheus
 ExecStart=/usr/local/bin/${EXCHANGE}_exporter.py
 Restart=always
-RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
