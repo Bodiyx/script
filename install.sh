@@ -1,9 +1,6 @@
 #!/bin/bash
 # ==================================================================
-# Node Exporter + Ping Exporter (Binance / Bybit / OKX)
-# Репозиторий: https://github.com/Bodiyx/script
-# Одной командой:
-# sudo sh -c "curl -fsSL https://raw.githubusercontent.com/Bodiyx/script/main/install.sh -o /tmp/install.sh && chmod +x /tmp/install.sh && /tmp/install.sh"
+# Node Exporter + Ping Exporter — финальная идемпотентная версия
 # ==================================================================
 
 set -e
@@ -22,31 +19,39 @@ clear
 echo -e "${GREEN}Установка Node Exporter + Ping Exporter${NC}"
 echo "════════════════════════════════════════════════"
 
-# === 1. Полная очистка предыдущей установки (идемпотентность) ===
-echo -e "${YELLOW}Удаляем старые сервисы и бинарники (если были)...${NC}"
+# === 1. Жёсткая очистка всего старого ===
+echo -e "${YELLOW}Останавливаем и удаляем всё старое...${NC}"
 
-systemctl stop node_exporter 2>/dev/null || true
-systemctl disable node_exporter 2>/dev/null || true
-rm -f /etc/systemd/system/node_exporter.service
-
-for old in binance_exporter bybit_exporter okx_exporter; do
-    systemctl stop $old 2>/dev/null || true
-    systemctl disable $old 2>/dev/null || true
-    rm -f /etc/systemd/system/${old}.service
-    rm -f /usr/local/bin/${old}.py
+# Останавливаем сервисы
+systemctl stop node_exporter ${EXCHANGE}_exporter 2>/dev/null || true
+for s in node_exporter binance_exporter bybit_exporter okx_exporter; do
+    systemctl disable $s 2>/dev/null || true
+    rm -f /etc/systemd/system/${s}.service
+    rm -f /etc/systemd/system/${s}.service.wants/*
 done
-
-pkill -f /usr/local/bin/node_exporter 2>/dev/null || true
-sleep 2
-rm -f /usr/local/bin/node_exporter
-
 systemctl daemon-reload >/dev/null 2>&1
+systemctl reset-failed >/dev/null 2>&1
 
-# === 2. Пользователь prometheus ===
+# Убиваем процессы node_exporter и все python-экспортеры
+pkill -f node_exporter || true
+pkill -f _exporter.py || true
+
+# Самый надёжный способ освободить занятый файл — удалить по inode
+if [ -f /usr/local/bin/node_exporter ]; then
+    echo "Освобождаем /usr/local/bin/node_exporter от блокировки..."
+    lsof /usr/local/bin/node_exporter 2>/dev/null | grep node_exporter | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+    sleep 2
+    rm -f /usr/local/bin/node_exporter
+fi
+
+# Удаляем старые python-экспортеры
+rm -f /usr/local/bin/*_exporter.py
+
+# === 2. Пользователь ===
 id prometheus >/dev/null 2>&1 || useradd -rs /bin/false prometheus
 
 # === 3. node_exporter 1.7.0 ===
-echo -e "${YELLOW}Устанавливаем node_exporter 1.7.0...${NC}"
+echo -e "${YELLOW}Устанавливаем node_exporter...${NC}"
 cd /tmp
 wget -q https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
 tar -xzf node_exporter-1.7.0.linux-amd64.tar.gz
@@ -71,10 +76,10 @@ case $choice in
     1) EXCHANGE="binance"; NAME="Binance" ;;
     2) EXCHANGE="bybit";   NAME="Bybit"   ;;
     3) EXCHANGE="okx";     NAME="OKX"     ;;
-    *) echo -e "${RED}Неправильно!${NC}"; exit 1 ;;
+    *) echo -e "${RED}Ошибка выбора${NC}"; exit 1 ;;
 esac
 
-# === 6. Скачивание нужного экспортера ===
+# === 6. Скачивание экспортера ===
 echo -e "${YELLOW}Скачиваем ${NAME}_exporter.py...${NC}"
 wget -q --no-cache \
     "https://raw.githubusercontent.com/Bodiyx/script/main/${EXCHANGE}_exporter.py" \
@@ -119,7 +124,7 @@ systemctl daemon-reload
 systemctl enable --now node_exporter
 systemctl enable --now ${EXCHANGE}_exporter
 
-# === 8. Firewall (iptables-legacy + persistent) ===
+# === 8. Firewall ===
 echo -e "${YELLOW}Настраиваем firewall...${NC}"
 DEBIAN_FRONTEND=noninteractive apt update >/dev/null
 DEBIAN_FRONTEND=noninteractive apt install -y iptables-persistent netfilter-persistent >/dev/null </dev/null
@@ -147,14 +152,10 @@ echo -e "${GREEN}Порт 9100 открыт только для $allowed_ip${NC}
 IP=$(hostname -I | awk '{print $1}')
 echo
 echo -e "${GREEN}УСТАНОВКА ЗАВЕРШЕНА УСПЕШНО!${NC}"
-echo
 echo "Node Exporter      → http://$IP:9100/metrics"
-echo "${NAME} Ping Exporter → http://$IP:XXXX/metrics (порт смотри в .py файле)"
+echo "${NAME} Ping Exporter → http://$IP:XXXX/metrics"
 echo
-echo "Проверить:"
-echo "  systemctl status node_exporter"
-echo "  systemctl status ${EXCHANGE}_exporter"
-echo "  sudo iptables -L -n -v"
-echo
+echo "systemctl status node_exporter ${EXCHANGE}_exporter"
+echo "iptables -L -n -v"
 
 exit 0
