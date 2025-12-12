@@ -118,7 +118,8 @@ read allowed_ip
 [[ -z "$allowed_ip" ]] && { echo -e "${RED}IP не введён${NC}"; exit 1; }
 
 iptables -D INPUT -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT 2>/dev/null || true
-iptables -I INPUT $NEW_POS -p tcp --dport 80 -j ACCEPT
+LINE_NUM=$(sudo iptables -L INPUT -n --line-numbers | grep 'tcp dpt:22' | awk '{print $1}')
+NEW_POS=$((LINE_NUM + 1))
 iptables -I INPUT $NEW_POS -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT   # без номера = всегда в начало
 netfilter-persistent save >/dev/null 2>&1 || true
 
