@@ -111,17 +111,19 @@ echo -e "${GREEN}Сервисы node_exporter и ${EXCHANGE}_exporter запущ
 
 # 9. Открытие порта 9100
 echo
-echo "Настройка порта 9100 (node_exporter)"
-echo -n "Разрешить доступ со всех IP? (y/n, по умолчанию y): "
-read all_ip
-if [[ $all_ip == "n" || $all_ip == "N" ]]; then
-    echo -n "Введите разрешённый IP: "
-    read allowed_ip
-    allowed_ip=${allowed_ip:-0.0.0.0/0}
-else
-    allowed_ip="0.0.0.0/0"
-    echo "Разрешён доступ со всех IP"
+echo "Настройка доступа к порту 9100 (node_exporter)"
+echo "Рекомендуется разрешать доступ только с IP вашего Prometheus/Grafana сервера!"
+echo -n "Введите IP-адрес, с которого будет идти запрос метрик (обязательно): "
+read allowed_ip
+
+# Если ничего не ввели — принудительно остановим установку
+if [[ -z "$allowed_ip" ]]; then
+    echo -e "${RED}Ошибка: IP-адрес не введён. Установка прервана.${NC}"
+    echo "Запустите скрипт заново и укажите IP вашего мониторинга."
+    exit 1
 fi
+
+echo -e "${YELLOW}Порт 9100 будет открыт только для IP: $allowed_ip${NC}"
 
 # Установка iptables-persistent если нет
 if ! dpkg -s netfilter-persistent >/dev/null 2>&1; then
