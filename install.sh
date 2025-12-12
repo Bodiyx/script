@@ -118,7 +118,8 @@ read allowed_ip
 [[ -z "$allowed_ip" ]] && { echo -e "${RED}IP не введён${NC}"; exit 1; }
 
 iptables -D INPUT -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT 2>/dev/null || true
-iptables -I INPUT -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT   # без номера = всегда в начало
+iptables -I INPUT $NEW_POS -p tcp --dport 80 -j ACCEPT
+iptables -I INPUT $NEW_POS -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT   # без номера = всегда в начало
 netfilter-persistent save >/dev/null 2>&1 || true
 
 echo -e "${GREEN}Порт 9100 открыт только для $allowed_ip${NC}"
