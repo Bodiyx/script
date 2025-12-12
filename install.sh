@@ -130,6 +130,6 @@ echo
 echo -e "${GREEN}УСТАНОВКА ЗАВЕРШЕНА УСПЕШНО!${NC}"
 echo "Node Exporter → http://$IP:9100/metrics"
 echo "${NAME} Ping Exporter → http://$IP:XXXX/metrics"
-echo "Проверить: sudo iptables -L -n -v"
+echo "Проверить: sudo iptables -L -n"
 
 exit 0
