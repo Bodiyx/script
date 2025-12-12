@@ -99,24 +99,25 @@ echo -e "${ELLOW}Вставляем порт 9100 сразу после прав
 update-alternatives --set iptables /usr/sbin/iptables-legacy >/dev/null 2>&1 || true
 
 echo
-echo -e "${ELLOW}Порт 9100 будет доступен ТОЛЬКО с одного IP${NC}"
+echo -e "${YELLOW}Порт 9100 будет доступен ТОЛЬКО с одного IP${NC}"
 echo -n "Введите IP вашего Prometheus/Grafana: "
 read allowed_ip
 [[ -z "$allowed_ip" ]] && { echo -e "${RED}IP не введён${NC}"; exit 1; }
 
 iptables -D INPUT -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT 2>/dev/null || true
 
-SSH_LINE=$(iptables -L INPUT --line-numbers 2>/dev/null | grep "tcp dpt:22" | awk '{print $1}')
-if [[ -n "$SSH_LINE" && "$SSH_LINE" =~ ^[0-9]+$ ]]; then
-    iptables -I INPUT $((SSH_LINE + 1)) -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT
+TRASH_LINE=$(iptables -L INPUT --line-numbers 2>/dev/null | grep "ACCEPT.*all.*anywhere.*anywhere" | head -1 | awk '{print $1}')
+
+if [[ -n "$TRASH_LINE" && "$TRASH_LINE" =~ ^[0-9]+$ ]]; then
+    iptables -I INPUT "$TRASH_LINE" -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT
 else
     iptables -A INPUT -p tcp -s "$allowed_ip" --dport 9100 -j ACCEPT
 fi
 
 iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
 
-echo -e "${GREEN}ГОТОВО! Правило вставлено после SSH:${NC}"
-iptables -L INPUT -n --line-numbers | grep -E "(dpt:22|dpt:9100|ACCEPT all -- anywhere|DROP all)" -A3 -B3
+echo -e "${GREEN}ГОТОВО! Правило вставлено ПЕРЕД мусорной строкой:${NC}"
+iptables -L INPUT -n --line-numbers | grep -E "(dpt:22|dpt:9100|ACCEPT all.*anywhere|DROP all)" -A2 -B2
 
 # 7. Финал
 IP=$(hostname -I | awk '{print $1}')
