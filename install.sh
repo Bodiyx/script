@@ -3,7 +3,7 @@
 # Node Exporter + Ping Exporter (Binance / Bybit / OKX)
 # Репозиторий: https://github.com/Bodiyx/script
 # Одной командой:
-# sudo sh -c "curl -fsSL https://raw.githubusercontent.com/Bodiyx/script/main/install.sh -o /tmp/install.sh && chmod +x /tmp/install.sh && /tmp/install.sh"
+# sudo sh -c "wget -O /tmp/install.sh https://raw.githubusercontent.com/Bodiyx/script/main/install.sh && chmod +x /tmp/install.sh && /tmp/install.sh""
 # ==================================================================
 
 set -e
@@ -23,7 +23,7 @@ echo -e "${GREEN}Установка Node Exporter + Ping Exporter${NC}"
 echo "════════════════════════════════════════════════"
 
 # 1. Полная очистка старого
-echo -e "${YELLOW}Удаляем старое (если было)...${NC}"
+echo -e "${YELLOW}Удаляем старые настройки ...${NC}"
 for s in node_exporter binance_exporter bybit_exporter okx_exporter; do
     systemctl stop $s 2>/dev/null || true
     systemctl disable $s 2>/dev/null || true
@@ -112,8 +112,7 @@ apt install -yqq iptables-persistent netfilter-persistent >/dev/null 2>&1
 update-alternatives --set iptables /usr/sbin/iptables-legacy 2>/dev/null || true
 
 echo
-echo -e "${YELLOW}ПОРТ 9100 ОТКРОЕТСЯ ТОЛЬКО ДЛЯ ОДНОГО IP${NC}"
-echo -n "Введите IP вашего Prometheus/Grafana: "
+echo -n "${GREEN}Введите IP вашего ядра: ${GREEN}"
 read allowed_ip
 [[ -z "$allowed_ip" ]] && { echo -e "${RED}IP не введён${NC}"; exit 1; }
 
@@ -131,6 +130,6 @@ echo
 echo -e "${GREEN}УСТАНОВКА ЗАВЕРШЕНА УСПЕШНО!${NC}"
 echo "Node Exporter → http://$IP:9100/metrics"
 echo "${NAME} Ping Exporter → http://$IP:XXXX/metrics"
-echo "Проверить: iptables -L -n -v"
+echo "Проверить: sudo iptables -L -n -v"
 
 exit 0
