@@ -1,6 +1,7 @@
 #!/bin/bash
 # ==================================================================
-# Node Exporter + Ping Exporter — финальная идемпотентная версия
+# Node Exporter + Ping Exporter — полностью идемпотентная версия
+# Работает даже если файлы заняты процессами
 # ==================================================================
 
 set -e
@@ -19,43 +20,41 @@ clear
 echo -e "${GREEN}Установка Node Exporter + Ping Exporter${NC}"
 echo "════════════════════════════════════════════════"
 
-# === 1. Жёсткая очистка всего старого ===
-echo -e "${YELLOW}Останавливаем и удаляем всё старое...${NC}"
+# === 1. ЖЁСТКОЕ УБИЙСТВО ВСЕГО СТАРОГО ===
+echo -e "${YELLOW}Принудительно останавливаем и удаляем старое...${NC}"
 
 # Останавливаем сервисы
-systemctl stop node_exporter ${EXCHANGE}_exporter 2>/dev/null || true
 for s in node_exporter binance_exporter bybit_exporter okx_exporter; do
+    systemctl stop $s 2>/dev/null || true
     systemctl disable $s 2>/dev/null || true
     rm -f /etc/systemd/system/${s}.service
-    rm -f /etc/systemd/system/${s}.service.wants/*
 done
 systemctl daemon-reload >/dev/null 2>&1
-systemctl reset-failed >/dev/null 2>&1
 
-# Убиваем процессы node_exporter и все python-экспортеры
-pkill -f node_exporter || true
-pkill -f _exporter.py || true
+# Убиваем все процессы, которые могут держать файлы
+pkill -9 -f node_exporter 2>/dev/null || true
+pkill -9 -f '_exporter.py' 2>/dev/null || true
+sleep 1
 
-# Самый надёжный способ освободить занятый файл — удалить по inode
+# Самый надёжный способ удалить занятый файл — скопировать поверх новый, а потом удалить старый
 if [ -f /usr/local/bin/node_exporter ]; then
-    echo "Освобождаем /usr/local/bin/node_exporter от блокировки..."
-    lsof /usr/local/bin/node_exporter 2>/dev/null | grep node_exporter | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
-    sleep 2
+    echo "Освобождаем /usr/local/bin/node_exporter..."
+    cp /usr/local/bin/node_exporter /tmp/node_exporter_old 2>/dev/null || true
+    cat /dev/null > /usr/local/bin/node_exporter 2>/dev/null || true   # обнуляем содержимое
     rm -f /usr/local/bin/node_exporter
 fi
 
-# Удаляем старые python-экспортеры
 rm -f /usr/local/bin/*_exporter.py
 
 # === 2. Пользователь ===
 id prometheus >/dev/null 2>&1 || useradd -rs /bin/false prometheus
 
 # === 3. node_exporter 1.7.0 ===
-echo -e "${YELLOW}Устанавливаем node_exporter...${NC}"
+echo -e "${YELLOW}Устанавливаем node_exporter 1.7.0...${NC}"
 cd /tmp
 wget -q https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
 tar -xzf node_exporter-1.7.0.linux-amd64.tar.gz
-cp node_exporter-1.7.0.linux-amd64/node_exporter /usr/local/bin/
+cp node_exporter-1.7.0.linux-amd64/node_exporter /usr/local/bin/node_exporter
 chmod +x /usr/local/bin/node_exporter
 rm -rf node_exporter-1.7.0*
 
@@ -76,7 +75,7 @@ case $choice in
     1) EXCHANGE="binance"; NAME="Binance" ;;
     2) EXCHANGE="bybit";   NAME="Bybit"   ;;
     3) EXCHANGE="okx";     NAME="OKX"     ;;
-    *) echo -e "${RED}Ошибка выбора${NC}"; exit 1 ;;
+    *) echo -e "${RED}Неправильно!${NC}"; exit 1 ;;
 esac
 
 # === 6. Скачивание экспортера ===
@@ -130,7 +129,6 @@ DEBIAN_FRONTEND=noninteractive apt update >/dev/null
 DEBIAN_FRONTEND=noninteractive apt install -y iptables-persistent netfilter-persistent >/dev/null </dev/null
 
 update-alternatives --set iptables /usr/sbin/iptables-legacy 2>/dev/null || true
-update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 2>/dev/null || true
 
 echo
 echo -e "${YELLOW}ПОРТ 9100 ОТКРОЕТСЯ ТОЛЬКО ДЛЯ ОДНОГО IP${NC}"
