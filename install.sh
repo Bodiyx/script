@@ -94,7 +94,7 @@ After=network.target
 [Service]
 User=prometheus
 Group=prometheus
-ExecStart=/usr/local/bin/${EXCHANGE}_exporter.py
+ExecStart=/usr/bin/python3 /usr/local/bin/${EXCHANGE}_exporter.py
 Restart=always
 [Install]
 WantedBy=multi-user.target
