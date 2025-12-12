@@ -112,7 +112,7 @@ apt install -yqq iptables-persistent netfilter-persistent >/dev/null 2>&1
 update-alternatives --set iptables /usr/sbin/iptables-legacy 2>/dev/null || true
 
 echo
-echo -n "${GREEN}Введите IP вашего ядра: ${GREEN}"
+echo -n "${GREEN}Введите IP вашего ядра: ${NC}"
 read allowed_ip
 [[ -z "$allowed_ip" ]] && { echo -e "${RED}IP не введён${NC}"; exit 1; }
 
