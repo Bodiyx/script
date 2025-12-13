@@ -117,6 +117,7 @@ if [[ -z "$profile_name" ]]; then
 else
     PY_FILE="/root/mt_backup.py"
 
+    # Подставляем реальное значение $profile_name в Python-скрипт
     cat > "$PY_FILE" << EOF
 import os
 import tarfile
@@ -127,7 +128,7 @@ import time
 # === Конфигурация ===
 SOURCE_DIR = "/root/.config/moontrader-data/data"
 BACKUP_DIR = "/root/.config/moontrader-data/backup"
-SEARCH_PATTERNS = [f"*{profile_name}*", "*.aes", "*.profile"]
+SEARCH_PATTERNS = ["*${profile_name}*", "*.aes", "*.profile"]
 RETENTION_DAYS = 5  # Хранить архивы не старше 5 дней
 LOG_FILE = os.path.join(BACKUP_DIR, "backup_log.txt")
 
@@ -195,7 +196,7 @@ if __name__ == "__main__":
 EOF
 
     chmod +x "$PY_FILE"
-    echo -e "${GREEN}Создан исполняемый файл: $PY_FILE${NC}"
+    echo -e "${GREEN}Создан исполняемый файл: $PY_FILE (профиль: ${profile_name})${NC}"
 
     # Добавляем в cron (ежедневно в 3:00)
     (crontab -l 2>/dev/null | grep -v "$PY_FILE"; echo "0 3 * * * /usr/bin/python3 $PY_FILE") | crontab -
